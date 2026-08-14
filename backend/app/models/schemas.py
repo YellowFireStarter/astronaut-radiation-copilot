@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 class MissionProfile(BaseModel):
     name: str = Field(default="Untitled mission", max_length=120)
-    orbit_type: Literal["leo_iss", "leo_polar", "lunar_transit", "deep_space"] = "leo_iss"
+    orbit_type: Literal["leo_iss", "leo_polar", "lunar_transit", "deep_space", "planetary_surface"] = "leo_iss"
     altitude_km: Optional[float] = Field(default=None, ge=0, description="Orbit altitude (LEO)")
     inclination_deg: Optional[float] = Field(default=None, ge=-90, le=90)
     start_date: date = Field(default_factory=date.today)

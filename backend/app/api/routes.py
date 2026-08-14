@@ -43,12 +43,12 @@ async def telemetry_latest():
 
 @router.get("/api/limits")
 async def limits():
-    from app.services.risk_service import LIMIT_30D_MSV, LIMIT_ANNUAL_MSV, LIMIT_CAREER_MSV
+    from app.services.risk_service import LIMIT_30D_MSV, LIMIT_ANNUAL_MSV, NASA_CAREER_LIMIT_MSV
     return {
         "30_day_msv": LIMIT_30D_MSV,
         "annual_msv": LIMIT_ANNUAL_MSV,
-        "career_msv": LIMIT_CAREER_MSV,
-        "note": "Placeholder pending verification of NASA-STD-3001 / NCRP values",
+        "career_msv": NASA_CAREER_LIMIT_MSV,
+        "note": "30-day/annual per NCRP 132 (BFO); career per NASA-STD-3001 (600 mSv). NCRP age/sex matrix used per-crew in risk assessment.",
     }
 
 

@@ -3,30 +3,34 @@
 Model structure (physics-informed lookups):
   total_daily = GCR_baseline(orbit_type) + SPE_daily(proton_flux, duration)
 
-TODO(verify): all constants below are PLACEHOLDERS pending verification against
-NASA/NAIRAS published values. They are structured to be swapped for real numbers
-without code changes.
+Verified references (2026-08-12 browser research):
+  - NASA OCHMO-TB-020 ("Design for Ionizing Radiation Protection", based on
+    NASA-STD-3001 Vol 1 Rev C): GCR dose rate ~1.3 mSv/day in free space,
+    ~0.9 mSv/day on planetary surfaces.
+  - NCRP Report 132: 30-day BFO limit 0.25 Gy-Eq, annual BFO limit 0.50 Gy-Eq.
+  - NASA current operational career limit: 600 mSv (age/sex neutral).
 
-Reference points to verify:
-  - GCR dose rates: ~0.3-1.0 mSv/day in LEO (varies with altitude/inclination/
-    solar cycle), ~1-2 mSv/day in deep space/lunar transit.
-  - SPE dose: scales with integral proton flux (>10 MeV) and duration; a large
-    SPE (e.g. Oct 2003) can deliver tens-hundreds of mSv unshielded.
+LEO values (leo_iss/leo_polar) are engineering estimates consistent with
+published ISS crew dose rates (~0.3-0.6 mSv/day, geomagnetic shielding).
 """
 from dataclasses import dataclass
 
 from app.models.schemas import MissionProfile, TelemetrySnapshot
 
-# Placeholder GCR baselines (mSv/day) — TODO(verify)
+# GCR baselines (mSv/day) — anchored to NASA OCHMO-TB-020 free-space/surface rates
 GCR_BASELINE_MSV_PER_DAY: dict[str, float] = {
-    "leo_iss": 0.35,       # ~400 km, 51.6 deg
-    "leo_polar": 0.60,     # higher-latitude crossings
-    "lunar_transit": 1.10,
-    "deep_space": 1.80,    # Mars transit approx
+    "leo_iss": 0.35,           # ~400 km, 51.6 deg (geomagnetically shielded)
+    "leo_polar": 0.60,         # higher-latitude crossings, less shielding
+    "lunar_transit": 1.20,     # free-space transit, ~1.3 mSv/day reference
+    "deep_space": 1.30,        # Mars transit, free space (OCHMO-TB-020: 1.3)
+    "planetary_surface": 0.90, # Moon/Mars surface (OCHMO-TB-020: 0.9)
 }
 
 # Placeholder SPE dose coefficient: mSv per (pfu * hour) — TODO(verify/calibrate)
 SPE_DOSE_COEFFICIENT = 1.5e-4  # extremely rough; calibrate against published SPE doses
+
+# SPE design-reference limit (NASA-STD-3001 / OCHMO-TB-020): 250 mSv effective dose
+SPE_LIMIT_MSV = 250.0
 
 # SPE flux threshold (pfu) above which we consider an event ongoing
 SPE_TRIPWIRE_PFU = 10.0
