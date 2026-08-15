@@ -6,7 +6,30 @@ import sys
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-PROJECT = r"C:\AIProjects\AutoClaw\Projects\astronaut-radiation-copilot"
+def _project_from_env_file():
+    """Read PROJECT from the mcp/.env file (no third-party deps)."""
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    try:
+        with open(env_path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, value = line.partition("=")
+                    if key.strip() == "PROJECT":
+                        return value.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return None
+
+
+# PROJECT comes from the environment variable, or from mcp/.env (see .env.example).
+PROJECT = os.getenv("PROJECT") or _project_from_env_file()
+if not PROJECT:
+    sys.exit(
+        "PROJECT is not set. Create mcp/.env (see mcp/.env.example) with "
+        "PROJECT=<absolute path to your project checkout>, or set the PROJECT "
+        "environment variable."
+    )
 PYTHON = os.path.join(PROJECT, "backend", ".venv", "Scripts", "python.exe")
 
 
