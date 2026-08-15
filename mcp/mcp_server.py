@@ -140,7 +140,7 @@ async def plan_mission(orbit_type: str, duration_days: int, crew_json: str) -> s
         f"Verdict: {data['verdict'].upper()} | projected {data['projected_total_msv']} mSv "
         f"| worst utilization {data['worst_utilization']*100:.1f}% "
         f"| max duration to 80% career budget: {data['max_duration_days']} days",
-        f"SPE overlay: {data['spe_alert']['level']} (S{data['spe_alert']['s_scale']})",
+        f"SPE overlay: {data['spe_alert']['level']} ({data['spe_alert']['s_scale']})",
     ]
     for r in data["crew_reports"]:
         lines.append(

@@ -80,7 +80,7 @@ def plan(mission: MissionProfile, crew: list[CrewMember], telemetry) -> dict:
     notes = [
         f"GCR baseline for {mission.orbit_type}: {GCR_BASELINE_MSV_PER_DAY.get(mission.orbit_type, 0.5)} mSv/day (NASA OCHMO-TB-020 anchored).",
         f"Max duration before 80% of most-exposed crew career budget: {max_days} days.",
-        f"Current SPE status: {alert['level']} (S{alert['s_scale']}, flux {alert['flux_pfu'] if alert['flux_pfu'] is not None else 'n/a'} pfu).",
+        f"Current SPE status: {alert['level']} ({alert['s_scale']}, flux {alert['flux_pfu'] if alert['flux_pfu'] is not None else 'n/a'} pfu).",
     ]
     if mission.duration_days > max_days:
         notes.append("Candidate duration exceeds the 80% career-budget window - consider a shorter profile or different orbit.")
