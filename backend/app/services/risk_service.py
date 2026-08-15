@@ -52,12 +52,16 @@ def assess(mission: MissionProfile, crew: list[CrewMember], telemetry: Telemetry
     dose = estimate_daily_dose(mission, telemetry)
     # Simulated cumulative exposure: assumed uniform accumulation across the mission
     cumulative = dose.total_daily_msv * mission.duration_days
+    # Utilization is evaluated against the mission's ACTUAL exposure windows
+    # (a 30-day mission only consumes a 30-day slice of the 30-day/annual limits)
+    window_30d = dose.total_daily_msv * min(mission.duration_days, 30)
+    window_annual = dose.total_daily_msv * min(mission.duration_days, 365)
 
     reports: list[RiskReport] = []
     for member in crew:
         career = career_limit_mSv(member.age, member.sex)
-        util_30d = dose.total_daily_msv * 30 / LIMIT_30D_MSV
-        util_annual = (dose.total_daily_msv * 365) / LIMIT_ANNUAL_MSV
+        util_30d = window_30d / LIMIT_30D_MSV
+        util_annual = window_annual / LIMIT_ANNUAL_MSV
         util_career = cumulative / career
 
         worst = max(util_30d, util_annual, util_career)
