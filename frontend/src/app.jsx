@@ -111,18 +111,36 @@ function FluxChart({ points, tripwire }) {
   )
 }
 
+const fmtHHMM = (tag) => {
+  if (!tag) return '--:--'
+  const s = String(tag)
+  // NOAA timestamps are UTC-naive (no timezone suffix); parse as UTC, not local time
+  const normalized = /[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? s : `${s}Z`
+  const d = new Date(normalized)
+  return Number.isNaN(d.getTime()) ? '--:--' : d.toUTCString().slice(17, 22)
+}
+
 function KpStrip({ points }) {
   if (!points || points.length === 0) return <p className="note">Kp history unavailable.</p>
   const bar = (kp) => (kp >= 5 ? 'var(--err)' : kp >= 4 ? 'var(--warn)' : kp >= 3 ? '#93c5fd' : 'var(--ok)')
   // Downsample to ~96 bars so the strip always fits its card
   const step = Math.max(1, Math.ceil(points.length / 96))
   const bars = points.filter((_, i) => i % step === 0)
+  const t0 = points[0]?.time_tag
+  const t1 = points[points.length - 1]?.time_tag
+  const tMid = points[Math.floor(points.length / 2)]?.time_tag
+  const spanMin = t0 && t1 ? Math.max(0, Math.round((new Date(t1) - new Date(t0)) / 60000)) : null
   return (
     <div className="kp-wrap">
-      <div className="kp-strip" title="Planetary Kp index (recent)">
+      <div className="kp-strip" title={`Planetary Kp index · last ~${spanMin ?? '?'} min (1-min samples)`}>
         {bars.map((p, i) => (
           <div key={i} className="kp-bar" style={{ background: bar(p.kp_index) }} />
         ))}
+      </div>
+      <div className="kp-axis">
+        <span className="note">{fmtHHMM(t0)}</span>
+        <span className="note">{fmtHHMM(tMid)}</span>
+        <span className="note">{fmtHHMM(t1)} UTC</span>
       </div>
       <div className="kp-legend">
         <span className="note"><i className="swatch" style={{ background: 'var(--ok)' }} />Kp 0–2</span>
