@@ -183,7 +183,7 @@ export default function App() {
   const [flux, setFlux] = useState(null)
   const [kp, setKp] = useState(null)
   const [mission, setMission] = useState({
-    name: 'Artemis-style lunar mission',
+    name: 'Sample mission',
     orbit_type: 'lunar_transit',
     duration_days: 30,
   })
