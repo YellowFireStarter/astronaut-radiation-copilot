@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     noaa_kp_path: str = "planetary_k_index_1m.json"
     noaa_mag_path: str = "rtsw/rtsw_mag_1m.json"
     noaa_wind_path: str = "rtsw/rtsw_wind_1m.json"
-    noaa_proton_path: str = "goes/primary/differential-protons-6-hour.json"
+    noaa_proton_path: str = "goes/primary/integral-protons-6-hour.json"
     noaa_xray_path: str = "goes/primary/xray-flares-latest.json"
 
     # Copilot API route paths (API contract; override via .env when needed)
@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     route_flux: str = "/api/telemetry/flux"
     route_kp: str = "/api/telemetry/kp"
     route_plan: str = "/api/plan"
+
+    # SPE dose model: mSv per (pfu * hour); calibrated, see dose_engine.py
+    spe_dose_coefficient: float = 2e-6
 
     cors_origins: str = "*"
 

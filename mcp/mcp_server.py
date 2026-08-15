@@ -102,7 +102,7 @@ async def get_spe_alert() -> str:
 
 @mcp.tool()
 async def get_proton_flux(hours: int = 6) -> str:
-    """GOES proton flux history (>=10 MeV proxy, pfu). `hours` in 1..6."""
+    """GOES integral proton flux history (>=10 MeV, pfu). `hours` in 1..6."""
     hours = max(1, min(int(hours), 6))
     data = await _api("GET", ROUTES["flux"], params={"hours": hours})
     pts = data.get("points", [])

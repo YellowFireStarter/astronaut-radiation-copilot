@@ -108,7 +108,7 @@ async def spe_alert_now():
 
 @router.get(settings.route_flux, response_model=FluxSeries)
 async def flux_history(hours: int = 6):
-    """SPE-proxy proton flux history (>= 10 MeV channels)."""
+    """Integral proton flux history (>= 10 MeV, official S-scale basis)."""
     hours = max(1, min(hours, 6))
     points = await noaa.get_proton_flux_series(hours=hours)
     bands = [

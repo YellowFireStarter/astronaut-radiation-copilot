@@ -4,7 +4,7 @@ Endpoints verified live on 2026-08-12 (all return current data):
   - planetary_k_index_1m.json          -> {time_tag, kp_index, estimated_kp, kp}
   - rtsw/rtsw_mag_1m.json              -> {time_tag, bt, bz_gsm, bx_gsm, ...}
   - rtsw/rtsw_wind_1m.json             -> plasma: speed, density, temperature
-  - goes/primary/differential-protons-6-hour.json -> {time_tag, satellite, flux, energy, channel}
+  - goes/primary/integral-protons-6-hour.json     -> {time_tag, satellite, flux, energy} (>=1/5/10/30/50/100 MeV)
   - goes/primary/xray-flares-latest.json
   - ace/epam/ace_epam_5m.json          -> ACE proton channels
 """
@@ -15,6 +15,26 @@ import httpx
 
 from app.config import get_settings
 from app.models.schemas import TelemetrySnapshot
+
+
+def _energy_lower_mev(energy: str) -> Optional[float]:
+    """Lower energy bound of a NOAA proton channel label, in MeV.
+
+    Handles both integral (">=10 MeV") and differential ("10000-30000 keV") labels.
+    Returns None when unparseable.
+    """
+    if not energy:
+        return None
+    e = energy.strip()
+    if e.startswith(">="):
+        try:
+            return float(e[2:].strip().split()[0])
+        except (ValueError, IndexError):
+            return None
+    try:
+        return float(e.split("-")[0].strip()) / 1000.0  # keV -> MeV
+    except (ValueError, IndexError):
+        return None
 
 
 class NOAAClient:
@@ -72,22 +92,18 @@ class NOAAClient:
         return out
 
     async def get_spe_proton_flux(self) -> Optional[float]:
-        """SPE proxy flux (pfu): max flux across channels with energy >= 10 MeV.
+        """Latest integral proton flux (pfu) for energies >= 10 MeV.
 
-        Channel energies look like '1020-1860 keV', '10000-30000 keV', '30000-60000 keV',
-        '60000-100000 keV', '100000-115000 keV', '115000-143000 keV'.
-        Returns max flux in pfu (1 pfu = 1 proton/cm2/sr/s) across high-energy channels.
+        Uses NOAA's integral proton product (official S-scale basis, 5-min cadence):
+        rows like {'energy': '>=10 MeV', 'flux': 0.217, ...}. Falls back to the max
+        across any channel with lower bound >= 10 MeV.
         """
         try:
             rows = await self._get_json(self.proton_path)
             peak = 0.0
             for row in rows:
-                energy: str = row.get("energy") or ""
-                try:
-                    lower_kev = float(energy.split("-")[0].strip())
-                except (ValueError, IndexError):
-                    continue
-                if lower_kev >= 10_000:  # >= 10 MeV
+                lower = _energy_lower_mev(row.get("energy") or "")
+                if lower is not None and lower >= 10.0:
                     peak = max(peak, float(row.get("flux") or 0.0))
             return peak if peak > 0 else None
         except Exception:
@@ -106,10 +122,10 @@ class NOAAClient:
             return None
 
     async def get_proton_flux_series(self, hours: int = 6) -> list[dict]:
-        """Time series of SPE-proxy flux (pfu, >= 10 MeV channels).
+        """Time series of integral proton flux (pfu, >= 10 MeV) at 5-min cadence.
 
-        Returns [{time_tag, flux_pfu}] at the source cadence (5 min) for the
-        requested window, using the max flux across high-energy channels.
+        Returns [{time_tag, flux_pfu}] for the requested window from NOAA's
+        integral proton product (official S-scale basis).
         """
         try:
             rows = await self._get_json(self.proton_path, ttl=180)
@@ -118,12 +134,8 @@ class NOAAClient:
         out: list[dict] = []
         by_time: dict[str, float] = {}
         for row in rows:
-            energy: str = row.get("energy") or ""
-            try:
-                lower_kev = float(energy.split("-")[0].strip())
-            except (ValueError, IndexError):
-                continue
-            if lower_kev < 10_000:
+            lower = _energy_lower_mev(row.get("energy") or "")
+            if lower is None or lower < 10.0:
                 continue
             tag = row.get("time_tag")
             if not tag:

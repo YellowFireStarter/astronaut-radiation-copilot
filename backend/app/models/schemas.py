@@ -27,7 +27,7 @@ class TelemetrySnapshot(BaseModel):
     solar_wind_bt: Optional[float] = None
     solar_wind_bz_gsm: Optional[float] = None
     solar_wind_speed_km_s: Optional[float] = None
-    spe_proton_flux: Optional[float] = Field(default=None, description="SPE proxy: max integral flux (pfu), channels >= 10 MeV")
+    spe_proton_flux: Optional[float] = Field(default=None, description="Integral proton flux >= 10 MeV (pfu, NOAA S-scale basis)")
     xray_flare_class: Optional[str] = None
     sources_ok: bool = True
     degraded: bool = False

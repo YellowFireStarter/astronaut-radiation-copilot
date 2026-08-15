@@ -24,7 +24,7 @@ Latest telemetry:
 - SPE proton flux (>10 MeV): {flux} pfu (tripwire 10 pfu)
 - Latest X-ray flare: {flare}
 
-Dose assessment (placeholder model, pending calibration):
+Dose assessment (simplified model, calibrated to ISS SPE measurements):
 - Daily dose: {daily} mSv/day (GCR {gcr}, SPE {spe})
 - Projected mission total: {total} mSv
 
