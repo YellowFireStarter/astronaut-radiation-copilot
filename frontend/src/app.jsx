@@ -46,6 +46,11 @@ function SpeBanner({ alert }) {
         <strong>{alert.flux_pfu == null ? 'n/a' : `${alert.flux_pfu} pfu`}</strong>
         {alert.flare_class ? ` · flare ${alert.flare_class}` : ''}
       </span>
+      {alert.forecast && (
+        <span className="spe-forecast" title={`SEP onset ${Math.round(alert.forecast.probability * 100)}% within ${alert.forecast.window_h}h (heuristic)`}>
+          SEP risk {alert.forecast.risk_label} · {Math.round(alert.forecast.probability * 100)}% / {alert.forecast.window_h}h
+        </span>
+      )}
       <span className="spe-action">{alert.action}</span>
     </div>
   )
