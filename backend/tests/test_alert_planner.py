@@ -88,3 +88,30 @@ def test_planner_max_duration_respects_youngest_female_budget():
 def test_career_limit_consistent_with_planner():
     assert career_limit_mSv(25, "female") == 400.0
     assert career_limit_mSv(55, "male") == 3000.0
+
+
+def test_sep_forecast_parse_and_table():
+    from app.services.sep_forecast import forecast, parse_flare_class
+    assert parse_flare_class("M1.2") == 0.12
+    assert parse_flare_class("X3") == 3.0
+    assert parse_flare_class("C2.1") == 0.021
+    assert parse_flare_class(None) is None
+    f = forecast("X1.5")
+    assert f["probability"] == 0.25
+    assert f["risk_level"] == "high"
+    assert f["window_h"] == 48
+
+
+def test_sep_forecast_levels():
+    from app.services.sep_forecast import forecast
+    assert forecast(None)["risk_level"] == "low"
+    assert forecast("C1.0")["risk_level"] == "low"
+    assert forecast("M6.0")["risk_level"] == "moderate"
+    assert forecast("X10.0")["risk_level"] == "severe"
+    assert forecast("X10.0")["probability"] == 0.75
+
+
+def test_spe_alert_includes_forecast():
+    alert = spe_alert.evaluate(_snapshot(flux=5.0))
+    assert "forecast" in alert
+    assert alert["forecast"]["window_h"] == 48

@@ -70,6 +70,7 @@ body {
   letter-spacing: 0.6px;
 }
 .spe-action { margin-left: auto; color: var(--muted); font-size: 0.82rem; }
+.spe-forecast { margin-left: 10px; font-size: 0.72rem; letter-spacing: 0.4px; opacity: 0.85; }
 
 .grid {
   display: grid;

@@ -12,10 +12,12 @@ from app.models.schemas import (
     MissionProfile,
     PlanResult,
     RiskAssessment,
+    SepForecast,
     SpeAlert,
     TelemetrySnapshot,
 )
 from app.services import risk_service, spe_alert
+from app.services.sep_forecast import forecast as forecast_sep
 from app.services.brief_generator import generate_brief
 from app.services.dose_engine import estimate_daily_dose, SPE_TRIPWIRE_PFU
 from app.services.noaa_client import NOAAClient
@@ -87,6 +89,13 @@ async def brief_generate(req: BriefRequest):
     if req.telemetry is None:
         req.telemetry = await noaa.latest_snapshot()
     return generate_brief(req)
+
+
+@router.get("/api/spe/forecast", response_model=SepForecast)
+async def spe_forecast():
+    """SEP onset forecast from the latest GOES flare class (heuristic)."""
+    telemetry = await noaa.latest_snapshot()
+    return SepForecast(**forecast_sep(telemetry.xray_flare_class))
 
 
 @router.get("/api/spe/alert", response_model=SpeAlert)

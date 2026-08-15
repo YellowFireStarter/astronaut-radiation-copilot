@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.models.schemas import TelemetrySnapshot
+from app.services.sep_forecast import forecast as forecast_sep
 
 # SPE tripwire (pfu) - an event is considered ongoing above this
 SPE_TRIPWIRE_PFU = 10.0
@@ -82,4 +83,5 @@ def evaluate(telemetry: TelemetrySnapshot) -> dict:
         "tripwire_pfu": SPE_TRIPWIRE_PFU,
         "action": ACTIONS[level],
         "time_tag": telemetry.time_tag or datetime.utcnow(),
+        "forecast": forecast_sep(telemetry.xray_flare_class),
     }

@@ -108,6 +108,17 @@ class SpeAlert(BaseModel):
     tripwire_pfu: float = 10.0
     action: str = ""
     time_tag: Optional[datetime] = None
+    forecast: Optional[SepForecast] = None
+
+
+class SepForecast(BaseModel):
+    flare_class: Optional[str] = None
+    probability: float = 0.01
+    window_h: int = 48
+    lead_time_h: float = 8.0
+    risk_level: Literal["low", "moderate", "high", "severe"] = "low"
+    risk_label: str = "LOW"
+    basis: str = ""
 
 
 class PlanCrewReport(BaseModel):
