@@ -86,7 +86,7 @@ class FluxSeries(BaseModel):
     points: list[FluxPoint] = []
     tripwire_pfu: float
     s_scale_bands: list[dict] = []
-    source: str = "goes/primary/differential-protons-6-hour.json"
+    source: str
 
 
 class KpPoint(BaseModel):
@@ -96,7 +96,7 @@ class KpPoint(BaseModel):
 
 class KpSeries(BaseModel):
     points: list[KpPoint] = []
-    source: str = "planetary_k_index_1m.json"
+    source: str
 
 
 class SpeAlert(BaseModel):

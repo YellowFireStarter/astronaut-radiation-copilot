@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import ROUTE from './config'
 
 const ORBITS = {
   leo_iss: 'LEO – ISS orbit (~400 km, 51.6°)',
@@ -180,12 +181,12 @@ export default function App() {
   const loadTelemetry = useCallback(async () => {
     try {
       const [h, t, l, a, f, k] = await Promise.all([
-        fetch('/health').then((r) => r.json()),
-        fetch('/api/telemetry/latest').then((r) => r.json()),
-        fetch('/api/limits').then((r) => r.json()),
-        fetch('/api/spe/alert').then((r) => r.json()),
-        fetch('/api/telemetry/flux?hours=6').then((r) => r.json()),
-        fetch('/api/telemetry/kp?points=288').then((r) => r.json()),
+        fetch(ROUTE.health).then((r) => r.json()),
+        fetch(ROUTE.telemetryLatest).then((r) => r.json()),
+        fetch(ROUTE.limits).then((r) => r.json()),
+        fetch(ROUTE.speAlert).then((r) => r.json()),
+        fetch(`${ROUTE.flux}?hours=6`).then((r) => r.json()),
+        fetch(`${ROUTE.kp}?points=288`).then((r) => r.json()),
       ])
       setBackend(h.status === 'ok' ? 'online' : 'offline')
       setTelemetry(t)
@@ -210,7 +211,7 @@ export default function App() {
     setBusy(true)
     setError('')
     try {
-      const resp = await fetch('/api/dose/forecast', {
+      const resp = await fetch(ROUTE.doseForecast, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(mission),
@@ -228,7 +229,7 @@ export default function App() {
     setBusy(true)
     setError('')
     try {
-      const resp = await fetch('/api/plan', {
+      const resp = await fetch(ROUTE.plan, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mission, crew }),
@@ -246,7 +247,7 @@ export default function App() {
     setBusy(true)
     setError('')
     try {
-      const resp = await fetch('/api/brief/generate', {
+      const resp = await fetch(ROUTE.briefGenerate, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mission, crew, kind }),
