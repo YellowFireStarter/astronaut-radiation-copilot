@@ -24,6 +24,11 @@ class NOAAClient:
         s = get_settings()
         self.base_url = (base_url or s.noaa_base_url).rstrip("/")
         self.ttl = ttl or s.cache_ttl_seconds
+        self.kp_path = s.noaa_kp_path
+        self.mag_path = s.noaa_mag_path
+        self.wind_path = s.noaa_wind_path
+        self.proton_path = s.noaa_proton_path
+        self.xray_path = s.noaa_xray_path
         self._cache: dict[str, tuple[float, Any]] = {}
 
     async def _get_json(self, path: str, ttl: Optional[int] = None) -> Any:
@@ -43,7 +48,7 @@ class NOAAClient:
     async def get_planetary_kp(self) -> Optional[float]:
         """Latest planetary Kp index (0-9)."""
         try:
-            rows = await self._get_json("planetary_k_index_1m.json")
+            rows = await self._get_json(self.kp_path)
             return float(rows[-1]["kp_index"]) if rows else None
         except Exception:
             return None
@@ -52,14 +57,14 @@ class NOAAClient:
         """Latest solar wind magnetic field + plasma."""
         out: dict = {}
         try:
-            mag = await self._get_json("rtsw/rtsw_mag_1m.json")
+            mag = await self._get_json(self.mag_path)
             last = mag[-1]
             out["bt"] = last.get("bt")
             out["bz_gsm"] = last.get("bz_gsm")
         except Exception:
             pass
         try:
-            wind = await self._get_json("rtsw/rtsw_wind_1m.json")
+            wind = await self._get_json(self.wind_path)
             last = wind[-1]
             out["speed_km_s"] = last.get("proton_speed") or last.get("speed") or last.get("velocity")
         except Exception:
@@ -74,7 +79,7 @@ class NOAAClient:
         Returns max flux in pfu (1 pfu = 1 proton/cm2/sr/s) across high-energy channels.
         """
         try:
-            rows = await self._get_json("goes/primary/differential-protons-6-hour.json")
+            rows = await self._get_json(self.proton_path)
             peak = 0.0
             for row in rows:
                 energy: str = row.get("energy") or ""
@@ -91,7 +96,7 @@ class NOAAClient:
     async def get_xray_flare_class(self) -> Optional[str]:
         """Most recent flare class (e.g. 'M1.2')."""
         try:
-            rows = await self._get_json("goes/primary/xray-flares-latest.json")
+            rows = await self._get_json(self.xray_path)
             if not rows:
                 return None
             last = rows[-1]
@@ -107,7 +112,7 @@ class NOAAClient:
         requested window, using the max flux across high-energy channels.
         """
         try:
-            rows = await self._get_json("goes/primary/differential-protons-6-hour.json", ttl=180)
+            rows = await self._get_json(self.proton_path, ttl=180)
         except Exception:
             return []
         out: list[dict] = []
@@ -134,7 +139,7 @@ class NOAAClient:
     async def get_kp_series(self, points: int = 288) -> list[dict]:
         """Sampled planetary Kp history: [{time_tag, kp_index}] (max `points`)."""
         try:
-            rows = await self._get_json("planetary_k_index_1m.json", ttl=300)
+            rows = await self._get_json(self.kp_path, ttl=300)
         except Exception:
             return []
         sampled = rows[-points:]

@@ -25,7 +25,37 @@ from typing import Any
 import httpx
 from mcp.server.fastmcp import FastMCP
 
+def _load_dotenv() -> None:
+    """Load mcp/.env into the environment (does not override existing vars)."""
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    try:
+        with open(env_path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, value = line.partition("=")
+                    key = key.strip()
+                    if key and key not in os.environ:
+                        os.environ[key] = value.strip().strip('"').strip("'")
+    except OSError:
+        pass
+
+
+_load_dotenv()
+
 BACKEND_URL = os.environ.get("COPILOT_BACKEND_URL", "http://localhost:8000").rstrip("/")
+
+# Backend route paths (must match the backend's ROUTE_* settings).
+ROUTES = {
+    "telemetry_latest": os.environ.get("COPILOT_ROUTE_TELEMETRY_LATEST", "/api/telemetry/latest"),
+    "spe_alert": os.environ.get("COPILOT_ROUTE_SPE_ALERT", "/api/spe/alert"),
+    "flux": os.environ.get("COPILOT_ROUTE_FLUX", "/api/telemetry/flux"),
+    "kp": os.environ.get("COPILOT_ROUTE_KP", "/api/telemetry/kp"),
+    "dose_forecast": os.environ.get("COPILOT_ROUTE_DOSE_FORECAST", "/api/dose/forecast"),
+    "risk_assess": os.environ.get("COPILOT_ROUTE_RISK_ASSESS", "/api/risk/assess"),
+    "plan": os.environ.get("COPILOT_ROUTE_PLAN", "/api/plan"),
+    "brief_generate": os.environ.get("COPILOT_ROUTE_BRIEF_GENERATE", "/api/brief/generate"),
+}
 
 mcp = FastMCP("radiation-copilot")
 
@@ -56,14 +86,14 @@ def _mission(orbit_type: str, duration_days: int, mission_name: str = "MCP missi
 @mcp.tool()
 async def get_live_telemetry() -> str:
     """Latest live space-weather telemetry from NOAA SWPC (Kp, solar wind, proton flux)."""
-    data = await _api("GET", "/api/telemetry/latest")
+    data = await _api("GET", ROUTES["telemetry_latest"])
     return json.dumps(data, indent=2, default=str)
 
 
 @mcp.tool()
 async def get_spe_alert() -> str:
     """Current solar particle event (SPE) alert: level, NOAA S-scale, flux, recommended action."""
-    data = await _api("GET", "/api/spe/alert")
+    data = await _api("GET", ROUTES["spe_alert"])
     return (f"SPE alert: {data['level'].upper()} (S-scale {data['s_scale']})\n"
             f"Proton flux (>=10 MeV): {data['flux_pfu']} pfu (tripwire {data['tripwire_pfu']})\n"
             f"Latest X-ray flare: {data.get('flare_class') or 'none'}\n"
@@ -74,7 +104,7 @@ async def get_spe_alert() -> str:
 async def get_proton_flux(hours: int = 6) -> str:
     """GOES proton flux history (>=10 MeV proxy, pfu). `hours` in 1..6."""
     hours = max(1, min(int(hours), 6))
-    data = await _api("GET", "/api/telemetry/flux", params={"hours": hours})
+    data = await _api("GET", ROUTES["flux"], params={"hours": hours})
     pts = data.get("points", [])
     if not pts:
         return "No proton flux data available."
@@ -88,7 +118,7 @@ async def get_proton_flux(hours: int = 6) -> str:
 async def get_kp_history(points: int = 288) -> str:
     """Recent planetary Kp index history (geomagnetic activity)."""
     points = max(24, min(int(points), 288))
-    data = await _api("GET", "/api/telemetry/kp", params={"points": points})
+    data = await _api("GET", ROUTES["kp"], params={"points": points})
     pts = data.get("points", [])
     if not pts:
         return "No Kp data available."
@@ -101,7 +131,7 @@ async def get_kp_history(points: int = 288) -> str:
 @mcp.tool()
 async def forecast_dose(orbit_type: str, duration_days: int, mission_name: str = "MCP mission") -> str:
     """Project radiation dose for a mission. orbit_type: leo_iss|leo_polar|lunar_transit|deep_space|planetary_surface."""
-    data = await _api("POST", "/api/dose/forecast",
+    data = await _api("POST", ROUTES["dose_forecast"],
                       payload=_mission(orbit_type, duration_days, mission_name))
     b = data["breakdown"]
     lines = [
@@ -117,7 +147,7 @@ async def forecast_dose(orbit_type: str, duration_days: int, mission_name: str =
 async def assess_risk(orbit_type: str, duration_days: int, crew_json: str) -> str:
     """Per-crew exposure vs NASA/NCRP limits. crew_json: [{"name","age","sex"}...]."""
     crew = _crew(crew_json)
-    data = await _api("POST", "/api/risk/assess",
+    data = await _api("POST", ROUTES["risk_assess"],
                       payload={"mission": _mission(orbit_type, duration_days), "crew": crew})
     lines = [f"Risk assessment - {data['mission']['orbit_type']} x {data['mission']['duration_days']}d:"]
     for r in data["reports"]:
@@ -134,7 +164,7 @@ async def assess_risk(orbit_type: str, duration_days: int, crew_json: str) -> st
 async def plan_mission(orbit_type: str, duration_days: int, crew_json: str) -> str:
     """What-if mission planner: feasibility verdict, utilization, max duration, SPE overlay."""
     crew = _crew(crew_json)
-    data = await _api("POST", "/api/plan",
+    data = await _api("POST", ROUTES["plan"],
                       payload={"mission": _mission(orbit_type, duration_days), "crew": crew})
     lines = [
         f"Verdict: {data['verdict'].upper()} | projected {data['projected_total_msv']} mSv "
@@ -161,7 +191,7 @@ async def generate_brief(kind: str = "daily", orbit_type: str = "lunar_transit",
         "crew": crew,
         "kind": kind,
     }
-    data = await _api("POST", "/api/brief/generate", payload=payload)
+    data = await _api("POST", ROUTES["brief_generate"], payload=payload)
     return (f"[{data['kind'].upper()} brief - {'LLM: ' + data['provider'] if data['llm_used'] else 'data-backed fallback'}]\n"
             + data["text"])
 

@@ -24,10 +24,11 @@ from app.services.noaa_client import NOAAClient
 from app.services.planner import plan as plan_mission
 
 router = APIRouter()
+settings = get_settings()
 noaa = NOAAClient()
 
 
-@router.get("/health")
+@router.get(settings.route_health)
 async def health():
     s = get_settings()
     snapshot = await noaa.latest_snapshot()
@@ -43,12 +44,12 @@ async def health():
     }
 
 
-@router.get("/api/telemetry/latest", response_model=TelemetrySnapshot)
+@router.get(settings.route_telemetry_latest, response_model=TelemetrySnapshot)
 async def telemetry_latest():
     return await noaa.latest_snapshot()
 
 
-@router.get("/api/limits")
+@router.get(settings.route_limits)
 async def limits():
     from app.services.risk_service import LIMIT_30D_MSV, LIMIT_ANNUAL_MSV, NASA_CAREER_LIMIT_MSV
     return {
@@ -59,7 +60,7 @@ async def limits():
     }
 
 
-@router.post("/api/dose/forecast", response_model=DoseForecast)
+@router.post(settings.route_dose_forecast, response_model=DoseForecast)
 async def dose_forecast(mission: MissionProfile):
     telemetry = await noaa.latest_snapshot()
     result = estimate_daily_dose(mission, telemetry)
@@ -75,7 +76,7 @@ async def dose_forecast(mission: MissionProfile):
     )
 
 
-@router.post("/api/risk/assess", response_model=RiskAssessment)
+@router.post(settings.route_risk_assess, response_model=RiskAssessment)
 async def risk_assess(mission: MissionProfile, crew: list[CrewMember]):
     if not crew:
         raise HTTPException(status_code=422, detail="Provide at least one crew member")
@@ -84,28 +85,28 @@ async def risk_assess(mission: MissionProfile, crew: list[CrewMember]):
     return RiskAssessment(mission=mission, reports=reports)
 
 
-@router.post("/api/brief/generate", response_model=BriefResponse)
+@router.post(settings.route_brief_generate, response_model=BriefResponse)
 async def brief_generate(req: BriefRequest):
     if req.telemetry is None:
         req.telemetry = await noaa.latest_snapshot()
     return generate_brief(req)
 
 
-@router.get("/api/spe/forecast", response_model=SepForecast)
+@router.get(settings.route_spe_forecast, response_model=SepForecast)
 async def spe_forecast():
     """SEP onset forecast from the latest GOES flare class (heuristic)."""
     telemetry = await noaa.latest_snapshot()
     return SepForecast(**forecast_sep(telemetry.xray_flare_class))
 
 
-@router.get("/api/spe/alert", response_model=SpeAlert)
+@router.get(settings.route_spe_alert, response_model=SpeAlert)
 async def spe_alert_now():
     """Current solar particle event alert level."""
     telemetry = await noaa.latest_snapshot()
     return SpeAlert(**spe_alert.evaluate(telemetry))
 
 
-@router.get("/api/telemetry/flux", response_model=FluxSeries)
+@router.get(settings.route_flux, response_model=FluxSeries)
 async def flux_history(hours: int = 6):
     """SPE-proxy proton flux history (>= 10 MeV channels)."""
     hours = max(1, min(hours, 6))
@@ -115,18 +116,18 @@ async def flux_history(hours: int = 6):
         {"label": "S2", "pfu": 100.0},
         {"label": "S3", "pfu": 1000.0},
     ]
-    return FluxSeries(points=points, tripwire_pfu=SPE_TRIPWIRE_PFU, s_scale_bands=bands)
+    return FluxSeries(points=points, tripwire_pfu=SPE_TRIPWIRE_PFU, s_scale_bands=bands, source=settings.noaa_proton_path)
 
 
-@router.get("/api/telemetry/kp", response_model=KpSeries)
+@router.get(settings.route_kp, response_model=KpSeries)
 async def kp_history(points: int = 288):
     """Sampled planetary Kp history (1-minute source, max 288 points)."""
     points = max(24, min(points, 288))
     data = await noaa.get_kp_series(points=points)
-    return KpSeries(points=data)
+    return KpSeries(points=data, source=settings.noaa_kp_path)
 
 
-@router.post("/api/plan", response_model=PlanResult)
+@router.post(settings.route_plan, response_model=PlanResult)
 async def plan_mission_endpoint(mission: MissionProfile, crew: list[CrewMember]):
     """What-if mission planner: project dose, margins, max duration, verdict."""
     if not crew:

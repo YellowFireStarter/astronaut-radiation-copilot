@@ -29,16 +29,16 @@ class LLMClient(abc.ABC):
 
 class GeminiClient(LLMClient):
     provider = "gemini"
-    API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
     def __init__(self, api_key: str, model: str):
         self.api_key = api_key
         self.model = model
+        self.api_url = get_settings().gemini_api_url.rstrip("/")
 
     async def generate(self, system: str, user: str) -> str:
         if not self.api_key:
             raise RuntimeError("GEMINI_API_KEY is not set")
-        url = f"{self.API_URL}/{self.model}:generateContent"
+        url = f"{self.api_url}/{self.model}:generateContent"
         payload = {
             "system_instruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": [{"text": user}]}],

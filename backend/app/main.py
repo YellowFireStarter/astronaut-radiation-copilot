@@ -23,9 +23,9 @@ def create_app() -> FastAPI:
     )
     app.include_router(router)
 
-    @app.get("/")
+    @app.get(s.route_root)
     async def root():
-        return {"app": s.app_name, "docs": "/docs", "health": "/health"}
+        return {"app": s.app_name, "docs": "/docs", "health": s.route_health}
 
     return app
 
