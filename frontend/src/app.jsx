@@ -118,15 +118,17 @@ function KpStrip({ points }) {
   const step = Math.max(1, Math.ceil(points.length / 96))
   const bars = points.filter((_, i) => i % step === 0)
   return (
-    <div className="kp-strip" title="Planetary Kp index (recent)">
-      {bars.map((p, i) => (
-        <div key={i} className="kp-bar" style={{ background: bar(p.kp_index) }} />
-      ))}
+    <div className="kp-wrap">
+      <div className="kp-strip" title="Planetary Kp index (recent)">
+        {bars.map((p, i) => (
+          <div key={i} className="kp-bar" style={{ background: bar(p.kp_index) }} />
+        ))}
+      </div>
       <div className="kp-legend">
-        <span className="note">Kp 0–2</span>
-        <span className="note">3</span>
-        <span className="note">4</span>
-        <span className="note">5+ storm</span>
+        <span className="note"><i className="swatch" style={{ background: 'var(--ok)' }} />Kp 0–2</span>
+        <span className="note"><i className="swatch" style={{ background: '#93c5fd' }} />3</span>
+        <span className="note"><i className="swatch" style={{ background: 'var(--warn)' }} />4</span>
+        <span className="note"><i className="swatch" style={{ background: 'var(--err)' }} />5+ storm</span>
       </div>
     </div>
   )

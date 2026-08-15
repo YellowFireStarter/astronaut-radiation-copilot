@@ -102,9 +102,11 @@ body {
 .flux-line { fill: none; stroke: var(--accent); stroke-width: 2; }
 .flux-dot { fill: var(--accent); }
 
+.kp-wrap { width: 100%; }
 .kp-strip { display: flex; align-items: flex-end; gap: 1px; height: 64px; width: 100%; overflow: hidden; }
 .kp-bar { flex: 1 1 0; min-width: 0; height: 100%; opacity: 0.85; border-radius: 1px; }
-.kp-legend { display: flex; gap: 10px; margin-top: 6px; }
+.kp-legend { display: flex; gap: 12px; margin-top: 6px; font-size: 0.72rem; color: var(--muted); }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 
 .telemetry-row {
   display: flex;
