@@ -108,9 +108,12 @@ function FluxChart({ points, tripwire }) {
 function KpStrip({ points }) {
   if (!points || points.length === 0) return <p className="note">Kp history unavailable.</p>
   const bar = (kp) => (kp >= 5 ? 'var(--err)' : kp >= 4 ? 'var(--warn)' : kp >= 3 ? '#93c5fd' : 'var(--ok)')
+  // Downsample to ~96 bars so the strip always fits its card
+  const step = Math.max(1, Math.ceil(points.length / 96))
+  const bars = points.filter((_, i) => i % step === 0)
   return (
     <div className="kp-strip" title="Planetary Kp index (recent)">
-      {points.map((p, i) => (
+      {bars.map((p, i) => (
         <div key={i} className="kp-bar" style={{ background: bar(p.kp_index) }} />
       ))}
       <div className="kp-legend">
