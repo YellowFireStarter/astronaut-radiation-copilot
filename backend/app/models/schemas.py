@@ -76,3 +76,57 @@ class BriefResponse(BaseModel):
     text: str
     llm_used: bool = False
     provider: str = "none"
+
+class FluxPoint(BaseModel):
+    time_tag: str
+    flux_pfu: float
+
+
+class FluxSeries(BaseModel):
+    points: list[FluxPoint] = []
+    tripwire_pfu: float
+    s_scale_bands: list[dict] = []
+    source: str = "goes/primary/differential-protons-6-hour.json"
+
+
+class KpPoint(BaseModel):
+    time_tag: str
+    kp_index: float
+
+
+class KpSeries(BaseModel):
+    points: list[KpPoint] = []
+    source: str = "planetary_k_index_1m.json"
+
+
+class SpeAlert(BaseModel):
+    level: Literal["nominal", "watch", "warning", "emergency"] = "nominal"
+    level_index: int = 0
+    flux_pfu: Optional[float] = None
+    s_scale: str = "S0"
+    flare_class: Optional[str] = None
+    tripwire_pfu: float = 10.0
+    action: str = ""
+    time_tag: Optional[datetime] = None
+
+
+class PlanCrewReport(BaseModel):
+    name: str
+    age: int
+    sex: str
+    career_limit_msv: float
+    projected_msv: float
+    utilization_career: float
+    utilization_30d: float
+    utilization_annual: float
+
+
+class PlanResult(BaseModel):
+    mission: MissionProfile
+    crew_reports: list[PlanCrewReport]
+    worst_utilization: float
+    projected_total_msv: float
+    max_duration_days: int
+    spe_alert: SpeAlert
+    verdict: Literal["feasible", "caution", "infeasible"]
+    notes: list[str] = []

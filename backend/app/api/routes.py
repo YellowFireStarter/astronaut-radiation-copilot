@@ -1,4 +1,4 @@
-"""API routes."""
+﻿"""API routes."""
 from fastapi import APIRouter, HTTPException
 
 from app.config import get_settings
@@ -7,14 +7,19 @@ from app.models.schemas import (
     BriefResponse,
     CrewMember,
     DoseForecast,
+    FluxSeries,
+    KpSeries,
     MissionProfile,
+    PlanResult,
     RiskAssessment,
+    SpeAlert,
     TelemetrySnapshot,
 )
-from app.services import risk_service
+from app.services import risk_service, spe_alert
 from app.services.brief_generator import generate_brief
-from app.services.dose_engine import estimate_daily_dose
+from app.services.dose_engine import estimate_daily_dose, SPE_TRIPWIRE_PFU
 from app.services.noaa_client import NOAAClient
+from app.services.planner import plan as plan_mission
 
 router = APIRouter()
 noaa = NOAAClient()
@@ -82,3 +87,42 @@ async def brief_generate(req: BriefRequest):
     if req.telemetry is None:
         req.telemetry = await noaa.latest_snapshot()
     return generate_brief(req)
+
+
+@router.get("/api/spe/alert", response_model=SpeAlert)
+async def spe_alert_now():
+    """Current solar particle event alert level."""
+    telemetry = await noaa.latest_snapshot()
+    return SpeAlert(**spe_alert.evaluate(telemetry))
+
+
+@router.get("/api/telemetry/flux", response_model=FluxSeries)
+async def flux_history(hours: int = 6):
+    """SPE-proxy proton flux history (>= 10 MeV channels)."""
+    hours = max(1, min(hours, 6))
+    points = await noaa.get_proton_flux_series(hours=hours)
+    bands = [
+        {"label": "S1", "pfu": 10.0},
+        {"label": "S2", "pfu": 100.0},
+        {"label": "S3", "pfu": 1000.0},
+    ]
+    return FluxSeries(points=points, tripwire_pfu=SPE_TRIPWIRE_PFU, s_scale_bands=bands)
+
+
+@router.get("/api/telemetry/kp", response_model=KpSeries)
+async def kp_history(points: int = 288):
+    """Sampled planetary Kp history (1-minute source, max 288 points)."""
+    points = max(24, min(points, 288))
+    data = await noaa.get_kp_series(points=points)
+    return KpSeries(points=data)
+
+
+@router.post("/api/plan", response_model=PlanResult)
+async def plan_mission_endpoint(mission: MissionProfile, crew: list[CrewMember]):
+    """What-if mission planner: project dose, margins, max duration, verdict."""
+    if not crew:
+        raise HTTPException(status_code=422, detail="Provide at least one crew member")
+    telemetry = await noaa.latest_snapshot()
+    return PlanResult(**plan_mission(mission, crew, telemetry))
+
+

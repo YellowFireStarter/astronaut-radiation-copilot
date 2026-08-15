@@ -1,4 +1,4 @@
-"""NOAA SWPC telemetry client.
+﻿"""NOAA SWPC telemetry client.
 
 Endpoints verified live on 2026-08-12 (all return current data):
   - planetary_k_index_1m.json          -> {time_tag, kp_index, estimated_kp, kp}
@@ -26,12 +26,12 @@ class NOAAClient:
         self.ttl = ttl or s.cache_ttl_seconds
         self._cache: dict[str, tuple[float, Any]] = {}
 
-    async def _get_json(self, path: str) -> Any:
-        key = path
+    async def _get_json(self, path: str, ttl: Optional[int] = None) -> Any:
+        key = f"{path}#{ttl or self.ttl}"
         now = time.monotonic()
         if key in self._cache:
             ts, data = self._cache[key]
-            if now - ts < self.ttl:
+            if now - ts < (ttl or self.ttl):
                 return data
         async with httpx.AsyncClient(timeout=12.0) as client:
             resp = await client.get(f"{self.base_url}/{path}")
@@ -100,6 +100,52 @@ class NOAAClient:
         except Exception:
             return None
 
+    async def get_proton_flux_series(self, hours: int = 6) -> list[dict]:
+        """Time series of SPE-proxy flux (pfu, >= 10 MeV channels).
+
+        Returns [{time_tag, flux_pfu}] at the source cadence (5 min) for the
+        requested window, using the max flux across high-energy channels.
+        """
+        try:
+            rows = await self._get_json("goes/primary/differential-protons-6-hour.json", ttl=180)
+        except Exception:
+            return []
+        out: list[dict] = []
+        by_time: dict[str, float] = {}
+        for row in rows:
+            energy: str = row.get("energy") or ""
+            try:
+                lower_kev = float(energy.split("-")[0].strip())
+            except (ValueError, IndexError):
+                continue
+            if lower_kev < 10_000:
+                continue
+            tag = row.get("time_tag")
+            if not tag:
+                continue
+            flux = float(row.get("flux") or 0.0)
+            by_time[tag] = max(by_time.get(tag, 0.0), flux)
+        for tag in sorted(by_time.keys()):
+            out.append({"time_tag": tag, "flux_pfu": round(by_time[tag], 3)})
+        if hours > 0:
+            out = out[-int(hours * 12):]
+        return out
+
+    async def get_kp_series(self, points: int = 288) -> list[dict]:
+        """Sampled planetary Kp history: [{time_tag, kp_index}] (max `points`)."""
+        try:
+            rows = await self._get_json("planetary_k_index_1m.json", ttl=300)
+        except Exception:
+            return []
+        sampled = rows[-points:]
+        out = []
+        for row in sampled:
+            kp = row.get("kp_index")
+            if kp is None:
+                continue
+            out.append({"time_tag": row.get("time_tag"), "kp_index": float(kp)})
+        return out
+
     async def latest_snapshot(self) -> TelemetrySnapshot:
         """Aggregate the latest telemetry into a snapshot."""
         kp = await self.get_planetary_kp()
@@ -119,3 +165,5 @@ class NOAAClient:
             sources_ok=ok,
             degraded=not ok,
         )
+
+
